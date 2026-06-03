@@ -1,0 +1,20 @@
+{
+  "name": "devsecops-assessment-node",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "jest --runInBand",
+    "lint": "eslint .",
+    "pack:npm": "npm pack --silent"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
+  }
+}

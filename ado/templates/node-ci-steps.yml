@@ -1,0 +1,15 @@
+parameters:
+  nodeVersion: '18.x'
+  runLint: true
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: ${{ parameters.nodeVersion }}
+  displayName: 'Use Node ${{ parameters.nodeVersion }}'
+
+# TODO: agregar:
+# - cache de npm (Cache@2) usando package-lock.json
+# - npm ci
+# - npm test
+# - (opcional) npm run lint basado en runLint

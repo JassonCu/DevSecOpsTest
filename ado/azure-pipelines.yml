@@ -1,0 +1,81 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  nodeVersion: '18.x'
+  artifactName: 'drop'
+  npmPackageName: 'devsecops-assessment-node'
+  # TODO: agregar variables/parametros útiles (ej. imageTag, npmPackOutput, etc.)
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: BuildAndTest
+  displayName: Build and Test
+  jobs:
+  - job: CI
+    displayName: Node CI
+    steps:
+    - checkout: self
+
+    # TODO: usar template en vez de tener todos los pasos inline
+    - task: NodeTool@0
+      inputs:
+        versionSpec: $(nodeVersion)
+      displayName: 'Use Node $(nodeVersion)'
+
+    - script: |
+        npm install
+        npm test
+      displayName: 'Install and test'
+      # TODO: cambiar a npm ci y agregar cache de npm
+
+    # TODO: ejecutar lint (opcional) y publicar resultados de pruebas (si aplica)
+
+- stage: Package
+  displayName: Package (conceptual npm package)
+  dependsOn: BuildAndTest
+  condition: succeeded()
+  jobs:
+  - job: PackageJob
+    displayName: Create package + publish artifact
+    steps:
+    - checkout: self
+
+    # TODO: reusar un template de pasos para evitar duplicación
+    - task: NodeTool@0
+      inputs:
+        versionSpec: $(nodeVersion)
+      displayName: 'Use Node $(nodeVersion)'
+
+    - script: |
+        npm ci
+        npm run pack:npm
+        mkdir -p out
+        mv *.tgz out/ || true
+      displayName: 'Create npm package (.tgz) into out/'
+      # TODO: asegurar que el nombre del .tgz sea determinístico y agregar metadata
+
+    # TODO: publicar out/ como pipeline artifact $(artifactName)
+
+- stage: Container
+  displayName: Container Build (no push)
+  dependsOn: Package
+  condition: succeeded()
+  jobs:
+  - job: DockerBuild
+    displayName: Build Docker Image
+    steps:
+    - checkout: self
+    - script: |
+        docker build -t $(npmPackageName):latest .
+      displayName: 'Docker build'
+    # TODO: agregar tag con $(Build.BuildId) y evidencia docker image inspect
