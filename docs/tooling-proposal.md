@@ -1,7 +1,7 @@
 # Tooling proposal (1 herramienta)
 
 ## Paso del flujo a mejorar
-- Ej: Secret scanning / SCA / Container scan / SBOM / Quality gate
+- Ej: Secret scanning / SCA / Container scan / SBOM / Helm/Kubernetes validation / Quality gate
 
 ## Herramienta propuesta
 - Nombre:

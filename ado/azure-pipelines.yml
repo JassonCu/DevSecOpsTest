@@ -12,7 +12,8 @@ variables:
   nodeVersion: '18.x'
   artifactName: 'drop'
   npmPackageName: 'devsecops-assessment-node'
-  # TODO: agregar variables/parametros útiles (ej. imageTag, npmPackOutput, etc.)
+  chartArtifactName: 'helm-chart'
+  # TODO: agregar variables/parametros útiles (ej. imageTag, enableGitleaks, helmChartPath, namespace, releaseName)
 
 pool:
   vmImage: ubuntu-latest
@@ -38,7 +39,7 @@ stages:
       displayName: 'Install and test'
       # TODO: cambiar a npm ci y agregar cache de npm
 
-    # TODO: ejecutar lint (opcional) y publicar resultados de pruebas (si aplica)
+    # TODO (opcional - desempate): integrar gitleaks (solo escaneo). Publicar reporte como artifact.
 
 - stage: Package
   displayName: Package (conceptual npm package)
@@ -65,10 +66,26 @@ stages:
       # TODO: asegurar que el nombre del .tgz sea determinístico y agregar metadata
 
     # TODO: publicar out/ como pipeline artifact $(artifactName)
+    # Nota: La publicación a un Azure Artifacts npm feed es SOLO conceptual y debe documentarse, no configurarse.
+
+- stage: Kubernetes
+  displayName: Kubernetes / Helm Validation
+  dependsOn: Package
+  condition: succeeded()
+  jobs:
+  - job: HelmValidate
+    displayName: Lint and render Helm chart
+    steps:
+    - checkout: self
+    # TODO: corregir chart Helm en charts/devsecops-app/
+    # TODO: instalar Helm o usar herramienta disponible en agente
+    # TODO: ejecutar 'helm lint' y 'helm template' sobre el chart
+    # TODO: corregir deployment.yaml y values.yaml para readiness/liveness, resources, image repo/tag, service port, namespace/release placeholders
+    # TODO: publicar manifests renderizados (helm template) como artifact $(chartArtifactName)
 
 - stage: Container
   displayName: Container Build (no push)
-  dependsOn: Package
+  dependsOn: Kubernetes
   condition: succeeded()
   jobs:
   - job: DockerBuild
