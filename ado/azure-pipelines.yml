@@ -12,8 +12,12 @@ variables:
   nodeVersion: '18.x'
   artifactName: 'drop'
   npmPackageName: 'devsecops-assessment-node'
-  chartArtifactName: 'helm-chart'
-  # TODO: agregar variables/parametros útiles (ej. imageTag, enableGitleaks, helmChartPath, namespace, releaseName)
+  chartArtifactName: 'helm-manifests'
+  imageTag: $(Build.BuildId)
+  helmChartPath: 'charts/devsecops-app'
+  namespace: 'default'
+  releaseName: 'devsecops-app'
+  enableGitleaks: 'true'
 
 pool:
   vmImage: ubuntu-latest
@@ -27,46 +31,62 @@ stages:
     steps:
     - checkout: self
 
-    # TODO: usar template en vez de tener todos los pasos inline
-    - task: NodeTool@0
-      inputs:
-        versionSpec: $(nodeVersion)
-      displayName: 'Use Node $(nodeVersion)'
+    - template: templates/node-ci-steps.yml
+      parameters:
+        nodeVersion: $(nodeVersion)
+        runLint: true
+        runTests: true
 
     - script: |
-        npm install
-        npm test
-      displayName: 'Install and test'
-      # TODO: cambiar a npm ci y agregar cache de npm
+        curl -sSfL \
+          https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz \
+          | tar xz -C /tmp gitleaks
+        /tmp/gitleaks detect \
+          --source $(Build.SourcesDirectory) \
+          --report-path $(Build.ArtifactStagingDirectory)/gitleaks-report.json \
+          --report-format json \
+          --exit-code 1
+      displayName: 'Secret scanning (gitleaks)'
+      condition: and(succeeded(), eq(variables['enableGitleaks'], 'true'))
 
-    # TODO (opcional - desempate): integrar gitleaks (solo escaneo). Publicar reporte como artifact.
+    - task: PublishPipelineArtifact@0
+      displayName: 'Publish gitleaks report'
+      condition: and(always(), eq(variables['enableGitleaks'], 'true'))
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)/gitleaks-report.json'
+        artifactName: 'gitleaks-report'
 
 - stage: Package
-  displayName: Package (conceptual npm package)
+  displayName: Package (npm .tgz)
   dependsOn: BuildAndTest
   condition: succeeded()
   jobs:
   - job: PackageJob
-    displayName: Create package + publish artifact
+    displayName: Create npm package + publish artifact
     steps:
     - checkout: self
 
-    # TODO: reusar un template de pasos para evitar duplicación
-    - task: NodeTool@0
-      inputs:
-        versionSpec: $(nodeVersion)
-      displayName: 'Use Node $(nodeVersion)'
+    - template: templates/node-ci-steps.yml
+      parameters:
+        nodeVersion: $(nodeVersion)
+        runLint: false
+        runTests: false
 
     - script: |
-        npm ci
         npm run pack:npm
         mkdir -p out
-        mv *.tgz out/ || true
+        mv *.tgz out/
+        echo "Package generated:"
+        ls -lh out/
       displayName: 'Create npm package (.tgz) into out/'
-      # TODO: asegurar que el nombre del .tgz sea determinístico y agregar metadata
 
-    # TODO: publicar out/ como pipeline artifact $(artifactName)
-    # Nota: La publicación a un Azure Artifacts npm feed es SOLO conceptual y debe documentarse, no configurarse.
+    - task: PublishPipelineArtifact@0
+      displayName: 'Publish npm package as Pipeline Artifact ($(artifactName))'
+      inputs:
+        targetPath: '$(Build.SourcesDirectory)/out'
+        artifactName: '$(artifactName)'
+
+    # Para publicar a un Azure Artifacts npm feed ver docs/azure-artifacts-concept.md.
 
 - stage: Kubernetes
   displayName: Kubernetes / Helm Validation
@@ -77,11 +97,29 @@ stages:
     displayName: Lint and render Helm chart
     steps:
     - checkout: self
-    # TODO: corregir chart Helm en charts/devsecops-app/
-    # TODO: instalar Helm o usar herramienta disponible en agente
-    # TODO: ejecutar 'helm lint' y 'helm template' sobre el chart
-    # TODO: corregir deployment.yaml y values.yaml para readiness/liveness, resources, image repo/tag, service port, namespace/release placeholders
-    # TODO: publicar manifests renderizados (helm template) como artifact $(chartArtifactName)
+
+    - task: HelmInstaller@1
+      displayName: 'Install Helm'
+      inputs:
+        helmVersionToInstall: 'latest'
+
+    - script: helm lint $(helmChartPath)
+      displayName: 'helm lint'
+
+    - script: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/helm-manifests
+        helm template $(releaseName) $(helmChartPath) \
+          --namespace $(namespace) \
+          > $(Build.ArtifactStagingDirectory)/helm-manifests/manifests.yaml
+        echo "--- Rendered manifests ---"
+        cat $(Build.ArtifactStagingDirectory)/helm-manifests/manifests.yaml
+      displayName: 'helm template (render manifests)'
+
+    - task: PublishPipelineArtifact@0
+      displayName: 'Publish rendered Helm manifests ($(chartArtifactName))'
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)/helm-manifests'
+        artifactName: '$(chartArtifactName)'
 
 - stage: Container
   displayName: Container Build (no push)
@@ -92,7 +130,14 @@ stages:
     displayName: Build Docker Image
     steps:
     - checkout: self
+
     - script: |
-        docker build -t $(npmPackageName):latest .
-      displayName: 'Docker build'
-    # TODO: agregar tag con $(Build.BuildId) y evidencia docker image inspect
+        docker build \
+          -t $(npmPackageName):$(imageTag) \
+          -t $(npmPackageName):latest \
+          .
+      displayName: 'Docker build (tagged with Build.BuildId)'
+
+    - script: |
+        docker image inspect $(npmPackageName):$(imageTag)
+      displayName: 'Docker image inspect (evidence, no push)'

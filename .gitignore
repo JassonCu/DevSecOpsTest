@@ -1,0 +1,11 @@
+node_modules/
+npm-debug.log*
+*.tgz
+out/
+.env
+.env.*
+coverage/
+.nyc_output/
+dist/
+build/
+.DS_Store

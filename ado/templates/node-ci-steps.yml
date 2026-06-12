@@ -1,6 +1,7 @@
 parameters:
   nodeVersion: '18.x'
   runLint: true
+  runTests: true
 
 steps:
 - task: NodeTool@0
@@ -8,8 +9,22 @@ steps:
     versionSpec: ${{ parameters.nodeVersion }}
   displayName: 'Use Node ${{ parameters.nodeVersion }}'
 
-# TODO: agregar:
-# - cache de npm (Cache@2) usando package-lock.json
-# - npm ci
-# - npm test
-# - (opcional) npm run lint basado en runLint
+- task: Cache@2
+  inputs:
+    key: 'npm | "$(Agent.OS)" | package-lock.json'
+    restoreKeys: |
+      npm | "$(Agent.OS)"
+    path: $(npm_config_cache)
+  displayName: 'Cache npm dependencies'
+
+- script: npm ci
+  displayName: 'Install dependencies (npm ci)'
+
+- ${{ if parameters.runTests }}:
+  - script: npm test
+    displayName: 'Run tests'
+
+- ${{ if parameters.runLint }}:
+  - script: npm run lint
+    displayName: 'Run lint'
+    continueOnError: true

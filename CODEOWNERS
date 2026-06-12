@@ -1,2 +1,29 @@
-# Ejemplo de CODEOWNERS
-* @team-devsecops
+# CODEOWNERS
+# Every PR requires approval from the owner of the changed paths.
+# Last matching rule takes precedence.
+
+# Default: DevSecOps team owns everything
+*                         @team-devsecops
+
+# Pipeline / CI-CD
+ado/                      @team-devsecops @team-platform
+.github/                  @team-devsecops @team-platform
+
+# Kubernetes / Helm
+charts/                   @team-devsecops @team-platform
+
+# Application source and tests
+src/                      @team-backend @team-devsecops
+tests/                    @team-backend @team-devsecops
+
+# Container
+Dockerfile                @team-devsecops @team-platform
+.dockerignore             @team-devsecops
+
+# Package manifest — both backend and devsecops must review
+package.json              @team-backend @team-devsecops
+package-lock.json         @team-backend
+
+# Documentation
+docs/                     @team-devsecops
+*.md                      @team-devsecops

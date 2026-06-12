@@ -1,18 +1,32 @@
 replicaCount: 1
 
 image:
-  repository: nginx
-  tag: latest
-  pullPolicy: Always
+  repository: devsecops-assessment-node
+  tag: "latest"
+  pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
-  port: 80
+  port: 3000
 
-resources: {}
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
 
 probes:
-  enabled: false
+  enabled: true
+  liveness:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 15
+  readiness:
+    path: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
 
 namespace: default
 releaseName: devsecops-app
