@@ -1,29 +1,33 @@
 # CODEOWNERS
 # Every PR requires approval from the owner of the changed paths.
 # Last matching rule takes precedence.
+#
+# NOTA: en un repo de organización real estos paths se asignarían a equipos
+# (@team-devsecops, @team-platform, @team-backend). En este fork de evaluación
+# el owner efectivo es @JassonCu, para que el archivo sea válido y funcional.
 
-# Default: DevSecOps team owns everything
-*                         @team-devsecops
+# Default: owner of everything
+*                         @JassonCu
 
-# Pipeline / CI-CD
-ado/                      @team-devsecops @team-platform
-.github/                  @team-devsecops @team-platform
+# Pipeline / CI-CD          (org real: @team-devsecops @team-platform)
+ado/                      @JassonCu
+.github/                  @JassonCu
 
-# Kubernetes / Helm
-charts/                   @team-devsecops @team-platform
+# Kubernetes / Helm         (org real: @team-devsecops @team-platform)
+charts/                   @JassonCu
 
-# Application source and tests
-src/                      @team-backend @team-devsecops
-tests/                    @team-backend @team-devsecops
+# Application source and tests  (org real: @team-backend @team-devsecops)
+src/                      @JassonCu
+tests/                    @JassonCu
 
-# Container
-Dockerfile                @team-devsecops @team-platform
-.dockerignore             @team-devsecops
+# Container                 (org real: @team-devsecops @team-platform)
+Dockerfile                @JassonCu
+.dockerignore             @JassonCu
 
-# Package manifest — both backend and devsecops must review
-package.json              @team-backend @team-devsecops
-package-lock.json         @team-backend
+# Package manifest          (org real: @team-backend @team-devsecops)
+package.json              @JassonCu
+package-lock.json         @JassonCu
 
-# Documentation
-docs/                     @team-devsecops
-*.md                      @team-devsecops
+# Documentation             (org real: @team-devsecops)
+docs/                     @JassonCu
+*.md                      @JassonCu
